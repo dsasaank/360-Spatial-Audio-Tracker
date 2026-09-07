@@ -88,6 +88,15 @@
         <button id="open-sidebar" class="absolute top-12 right-12 z-20 w-12 h-12 rounded-full border border-white/20 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-500 hover:scale-110 glass-panel pointer-events-auto opacity-0 translate-x-4">
             <i class="ph ph-list text-xl"></i>
         </button>
+
+        <!-- Tracking Toggle Button (Bottom Center) 
+             Note: Starts with translateX(calc(-50% - 210px)) because the 420px sidebar is open by default -->
+        <div id="tracking-toggle-container" style="transform: translateX(calc(-50% - 210px));" class="absolute bottom-10 left-1/2 z-20 flex flex-col items-center gap-2 pointer-events-auto opacity-0 transition-all duration-700 ease-in-out">
+            <button id="toggle-tracking-btn" class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center bg-black/80 backdrop-blur-md text-white hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <i id="tracking-icon" class="ph-fill ph-user-focus text-xl"></i>
+            </button>
+            <span id="tracking-btn-text" class="text-[9px] font-space font-bold tracking-[0.2em] uppercase text-white drop-shadow-md transition-colors">HEAD TRACKING: ON</span>
+        </div>
         
         <!-- Start Overlay -->
         <div id="start-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-md pointer-events-auto transition-opacity duration-500">
@@ -98,7 +107,7 @@
             </button>
             <div id="loading-overlay" class="hidden flex-col items-center mt-4 opacity-0 transition-opacity duration-500">
                 <i class="ph ph-spinner animate-spin text-2xl text-white mb-2"></i>
-                <p class="text-[10px] font-space tracking-widest uppercase text-gray-400">Selling your data to China</p>
+                <p class="text-[10px] font-space tracking-widest uppercase text-gray-400">Stealing Your Data</p>
             </div>
             <p id="error-msg" class="hidden mt-6 max-w-xs text-center text-[10px] font-space tracking-widest uppercase text-red-400/90 leading-relaxed"></p>
         </div>
@@ -115,18 +124,15 @@
             <span class="text-[10px] font-space font-bold tracking-[0.2em] text-gray-500 uppercase">Library</span>
         </div>
 
-        <!-- Cover Art -->
         <div class="w-full aspect-square bg-[#0a0a0a] rounded-xl overflow-hidden mb-8 shadow-2xl border border-white/5 relative group flex items-center justify-center">
             <img id="ui-cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' font-size='40' fill='%23333' text-anchor='middle' dominant-baseline='middle'%3E%E2%99%AC%3C/text%3E%3C/svg%3E" onerror="handleArtError(this)" class="w-full h-full object-cover transition-all duration-700 group-hover:scale-105" alt="Cover Art">
         </div>
         
-        <!-- Track Info -->
         <div class="mb-6">
             <h3 id="ui-title" class="text-2xl font-space font-bold text-white tracking-tight mb-1 truncate leading-none transition-colors">NO MEDIA</h3>
-            <p id="ui-artist" class="text-gray-500 text-[11px] font-space tracking-widest uppercase truncate">Add Media to start Listening</p>
+            <p id="ui-artist" class="text-gray-500 text-[11px] font-space tracking-widest uppercase truncate">Add media to start Listening</p>
         </div>
 
-        <!-- Custom Seek Bar -->
         <div class="mb-6 group">
             <div id="progress-container" class="w-full h-1 bg-white/10 relative cursor-pointer overflow-hidden rounded-full transition-all hover:h-1.5">
                 <div id="progress-bar" class="absolute top-0 left-0 h-full bg-white w-0 transition-all duration-100 ease-linear shadow-[0_0_10px_#fff]"></div>
@@ -137,12 +143,10 @@
             </div>
         </div>
 
-        <!-- Playlist -->
         <div id="song-list" class="flex-1 overflow-y-auto space-y-1 mb-8 border-t border-white/10 pt-4 pr-2">
             <p id="song-list-empty" class="text-[10px] font-space tracking-widest uppercase text-gray-600 text-center mt-6">Queue Empty</p>
         </div>
 
-        <!-- Custom Audio Player Controls -->
         <div class="flex items-center justify-between border-t border-white/10 pt-6 mt-auto">
             <audio id="audio-player" class="hidden"></audio>
             <input type="file" id="audio-upload" accept="audio/*" multiple class="hidden">
@@ -162,10 +166,10 @@
         </div>
     </div>
 
-    <!-- HIDDEN DEV SETTINGS PANEL -->
+    <!-- DEV SETTINGS PANEL -->
     <div id="settings-panel" class="absolute inset-y-0 right-0 w-[420px] bg-bgpanel/95 backdrop-blur-3xl border-l border-white/10 p-8 overflow-y-auto transform translate-x-full transition-transform duration-500 ease-out z-50 shadow-2xl">
-        <div class="flex justify-between items-center mb-8">
-            <h2 class="text-xl font-space font-bold text-white tracking-tight">Settings</h2>
+        <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
+            <h2 class="text-lg font-space font-bold text-white tracking-widest uppercase">Engine Parameters</h2>
             <button id="close-settings" class="w-8 h-8 flex items-center justify-center rounded-md border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"><i class="ph ph-x text-sm"></i></button>
         </div>
 
@@ -175,61 +179,97 @@
         </div>
 
         <div class="space-y-8">
+            <!-- TRACKING -->
             <div>
-                <p class="text-[10px] font-space font-bold tracking-[0.1em] text-gray-500 uppercase mb-4">Tracking</p>
+                <p class="text-[10px] font-space font-bold tracking-[0.2em] text-gray-500 uppercase mb-4 border-b border-white/5 pb-2">Tracking Logic</p>
+                
                 <div class="mb-5">
-                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
-                        <span>Sensitivity</span><span id="sens-open-val" class="text-white">0.7</span>
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Sensitivity (Open)</span><span id="sens-open-val" class="text-white font-bold">0.7</span>
                     </label>
                     <input type="range" id="sens-open-slider" min="0.1" max="5.0" step="0.1" value="0.7">
                 </div>
-                <div class="flex items-center justify-between mb-5">
-                    <label for="invert-pan" class="text-xs font-space font-medium text-gray-300 cursor-pointer">Invert head direction</label>
-                    <input type="checkbox" id="invert-pan" checked class="w-4 h-4 bg-transparent border-white/30 rounded cursor-pointer accent-white">
+
+                <div class="mb-5">
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Sensitivity (Closed)</span><span id="sens-closed-val" class="text-white font-bold">1.3</span>
+                    </label>
+                    <input type="range" id="sens-closed-slider" min="0.1" max="5.0" step="0.1" value="1.3">
+                    <p class="text-[9px] text-gray-500 mt-1.5 leading-tight">Live-switches the instant your eye state changes.</p>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Pan Curve (Damping)</span><span id="pan-curve-val" class="text-white font-bold">1.8 (moderate)</span>
+                    </label>
+                    <input type="range" id="pan-curve-slider" min="1.0" max="3.0" step="0.1" value="1.8">
+                    <p class="text-[9px] text-gray-500 mt-1.5 leading-tight">Mouse-acceleration curve. Small head turns near center move less; further turns ramp up.</p>
+                </div>
+
+                <div class="flex items-center justify-between mb-2 mt-4 bg-white/5 p-3 rounded-md border border-white/5">
+                    <label for="invert-pan" class="text-[11px] font-space font-medium text-gray-300 cursor-pointer">Invert Axis</label>
+                    <input type="checkbox" id="invert-pan" class="w-4 h-4 bg-transparent border-white/30 rounded cursor-pointer accent-white">
                 </div>
             </div>
 
-            <div class="w-full h-px bg-white/5"></div>
-
+            <!-- EYES -->
             <div>
-                <p class="text-[10px] font-space font-bold tracking-[0.1em] text-gray-500 uppercase mb-4">Eyes</p>
-                <div class="mb-5">
-                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
-                        <span>Blink threshold (EAR)</span><span id="ear-val" class="text-white">0.26</span>
+                <p class="text-[10px] font-space font-bold tracking-[0.2em] text-gray-500 uppercase mb-4 border-b border-white/5 pb-2">Vision Triggers</p>
+                <div class="mb-2">
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Blink Threshold (EAR)</span><span id="ear-val" class="text-white font-bold">0.18</span>
                     </label>
-                    <input type="range" id="ear-slider" min="0.10" max="0.40" step="0.01" value="0.26">
-                    <p class="text-[9px] text-gray-500 mt-2 text-right tracking-widest uppercase">Live: <span id="current-ear-text" class="text-white font-bold">0.00</span></p>
+                    <input type="range" id="ear-slider" min="0.10" max="0.40" step="0.01" value="0.18">
+                    <p class="text-[10px] text-gray-400 mt-2 text-right tracking-widest uppercase font-bold">Live EAR: <span id="current-ear-text" class="text-white">0.00</span></p>
                 </div>
             </div>
-            
-            <div class="w-full h-px bg-white/5"></div>
 
+            <!-- SOUND -->
             <div>
-                <p class="text-[10px] font-space font-bold tracking-[0.1em] text-gray-500 uppercase mb-4">Sound</p>
+                <p class="text-[10px] font-space font-bold tracking-[0.2em] text-gray-500 uppercase mb-4 border-b border-white/5 pb-2">3-Band Crossover Network</p>
+                
                 <div class="mb-5">
-                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
-                        <span>Bass / mid crossover</span><span id="cross1-val" class="text-white">300Hz</span>
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Bass / Mid Crossover</span><span id="cross1-val" class="text-white font-bold">250Hz</span>
                     </label>
-                    <input type="range" id="cross1-slider" min="60" max="500" step="10" value="300">
+                    <input type="range" id="cross1-slider" min="60" max="500" step="10" value="250">
                 </div>
+                
                 <div class="mb-5">
-                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
-                        <span>Crossover smoothness</span><span id="crossq-val" class="text-white">0.30</span>
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Mid / Treble Crossover</span><span id="cross2-val" class="text-white font-bold">4000Hz</span>
                     </label>
-                    <input type="range" id="crossq-slider" min="0.30" max="2.00" step="0.01" value="0.30">
+                    <input type="range" id="cross2-slider" min="1000" max="8000" step="100" value="4000">
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Crossover Smoothness (Q)</span><span id="crossq-val" class="text-white font-bold">0.71 (standard)</span>
+                    </label>
+                    <input type="range" id="crossq-slider" min="0.30" max="2.00" step="0.01" value="0.71">
+                    <p class="text-[9px] text-gray-500 mt-1.5 leading-tight">Lower = wider, gentler blend between bands. Higher = tighter, sharper split.</p>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Mid Pan Attenuation</span><span id="mid-trim-val" class="text-white font-bold">0.0 dB at full pan</span>
+                    </label>
+                    <input type="range" id="mid-trim-slider" min="-6" max="3" step="0.5" value="0.0">
+                    <p class="text-[9px] text-gray-500 mt-1.5 leading-tight">Trims dB off the natural equal-power rise as you turn. Negative values tame the gain.</p>
+                </div>
+
+                <div class="mb-8">
+                    <label class="block text-[11px] font-space font-medium text-gray-300 mb-2 flex justify-between">
+                        <span>Treble Pan Behavior</span><span id="treble-pan-val" class="text-white font-bold">+100% (Matched)</span>
+                    </label>
+                    <input type="range" id="treble-pan-slider" min="-100" max="100" step="5" value="100">
+                    <p class="text-[9px] text-gray-500 mt-1.5 leading-tight">-100 = Treble panned opposite to mids. 0 = Always centered. +100 = Follows mids exactly.</p>
                 </div>
             </div>
-
-            <input type="hidden" id="sens-closed-slider" value="1.3">
-            <input type="hidden" id="pan-curve-slider" value="1.8">
-            <input type="hidden" id="cross2-slider" value="4700">
-            <input type="hidden" id="mid-trim-slider" value="-0.5">
-            <input type="hidden" id="treble-pan-slider" value="-100">
         </div>
     </div>
 
     <script>
-        // DOM Elements
         const videoElement = document.getElementById('input_video');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
@@ -246,6 +286,12 @@
         const rightSidebar = document.getElementById('right-sidebar');
         const openSidebarBtn = document.getElementById('open-sidebar');
         const closeSidebarBtn = document.getElementById('close-sidebar');
+
+        // Toggle Tracking Elements
+        const trackingToggleContainer = document.getElementById('tracking-toggle-container');
+        const toggleTrackingBtn = document.getElementById('toggle-tracking-btn');
+        const trackingIcon = document.getElementById('tracking-icon');
+        const trackingBtnText = document.getElementById('tracking-btn-text');
 
         const btnPlay = document.getElementById('btn-play');
         const playIcon = document.getElementById('play-icon');
@@ -285,27 +331,16 @@
         let isEyesClosed = false;
         let isPlaying = false;
         let isTrackingStarted = false;
+        let isTrackingEnabled = true;
 
-        // Actual capture resolution requested from the webcam - MediaPipe's landmark
-        // x/y coordinates are normalized (0-1) against this frame, so any pixel-distance
-        // math (EAR calculation) must scale back using these exact numbers, not the
-        // on-screen canvas size, or the aspect ratio gets skewed.
         const VIDEO_CAPTURE_WIDTH = 640;
         const VIDEO_CAPTURE_HEIGHT = 480;
 
-        // Raw pixel distance between two normalized landmarks, scaled back to the
-        // actual capture frame dimensions (not a single square constant) so the EAR
-        // ratio isn't skewed by the 640x480 (4:3) aspect ratio. Defined once here
-        // instead of as a closure recreated on every single onResults() frame.
         const getDist = (p1, p2) => Math.hypot(
             (p1.x - p2.x) * VIDEO_CAPTURE_WIDTH,
             (p1.y - p2.y) * VIDEO_CAPTURE_HEIGHT
         );
 
-        // Shows a plain-language error under the start button - camera permission
-        // issues (very common on macOS the first time a browser asks for camera
-        // access, or when the page is opened as a local file instead of via a
-        // server) otherwise fail completely silently.
         function showError(msg) {
             if (!errorMsgEl) return;
             errorMsgEl.textContent = msg;
@@ -316,18 +351,11 @@
             errorMsgEl.classList.add('hidden');
         }
 
-        // Shared fallback for any album art <img> (cover box or playlist thumbnails):
-        // if a data URI ever fails to decode, drop back to the placeholder art instead
-        // of showing a broken-image icon. Declared as a real global function (not an
-        // arrow/const) so inline onerror="" attributes built via innerHTML can call it.
         function handleArtError(imgEl) {
-            imgEl.onerror = null; // prevent any possible loop if the placeholder itself ever failed
+            imgEl.onerror = null; 
             imgEl.src = PLACEHOLDER_ART;
         }
 
-        // Ensure canvas stays full screen even when window is resized, and render at
-        // native pixel density so the particle visualizer stays crisp on Retina/HiDPI
-        // displays (effectively all current Macs) instead of looking soft/blurry.
         let logicalWidth = window.innerWidth;
         let logicalHeight = window.innerHeight;
         function resizeCanvas() {
@@ -339,17 +367,41 @@
             canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
         window.addEventListener('resize', resizeCanvas);
-        resizeCanvas(); // Set initial size
+        resizeCanvas(); 
 
-        // --- SIDEBAR TOGGLES --- //
+        // --- TRACKING TOGGLE LOGIC --- //
+        toggleTrackingBtn.addEventListener('click', () => {
+            isTrackingEnabled = !isTrackingEnabled;
+            if (isTrackingEnabled) {
+                // Tracking ON: Dark Button
+                toggleTrackingBtn.classList.remove('bg-white', 'text-black', 'border-transparent');
+                toggleTrackingBtn.classList.add('bg-black/80', 'backdrop-blur-md', 'text-white', 'border-white/20');
+                trackingIcon.classList.replace('ph', 'ph-fill');
+                trackingBtnText.innerText = 'HEAD TRACKING: ON';
+                trackingBtnText.classList.replace('text-gray-500', 'text-white');
+            } else {
+                // Tracking OFF: Bright White Button
+                toggleTrackingBtn.classList.remove('bg-black/80', 'backdrop-blur-md', 'text-white', 'border-white/20');
+                toggleTrackingBtn.classList.add('bg-white', 'text-black', 'border-transparent');
+                trackingIcon.classList.replace('ph-fill', 'ph');
+                trackingBtnText.innerText = 'HEAD TRACKING: OFF';
+                trackingBtnText.classList.replace('text-white', 'text-gray-500');
+            }
+        });
+
+        // --- SIDEBAR TOGGLES (WITH DYNAMIC RE-CENTERING) --- //
         openSidebarBtn.addEventListener('click', () => {
             rightSidebar.classList.remove('translate-x-full');
             openSidebarBtn.classList.add('opacity-0', 'translate-x-4', 'pointer-events-none');
+            // Center the tracking toggle based on the remaining stage width (sidebar is 420px)
+            trackingToggleContainer.style.transform = 'translateX(calc(-50% - 210px))';
         });
         
         closeSidebarBtn.addEventListener('click', () => {
             rightSidebar.classList.add('translate-x-full');
             openSidebarBtn.classList.remove('opacity-0', 'translate-x-4', 'pointer-events-none');
+            // Re-center relative to the full screen
+            trackingToggleContainer.style.transform = 'translateX(-50%)';
         });
         
         btnSettings.addEventListener('click', () => {
@@ -405,10 +457,35 @@
             if(audioPlayer.duration) audioPlayer.currentTime = pos * audioPlayer.duration;
         });
 
+        // --- SETTINGS UI UPDATES --- //
         sensOpenSlider.addEventListener('input', (e) => document.getElementById('sens-open-val').innerText = parseFloat(e.target.value).toFixed(1));
+        sensClosedSlider.addEventListener('input', (e) => document.getElementById('sens-closed-val').innerText = parseFloat(e.target.value).toFixed(1));
         earSlider.addEventListener('input', (e) => document.getElementById('ear-val').innerText = parseFloat(e.target.value).toFixed(2));
-        cross1Slider.addEventListener('input', (e) => document.getElementById('cross1-val').innerText = e.target.value + 'Hz');
-        crossQSlider.addEventListener('input', (e) => document.getElementById('crossq-val').innerText = parseFloat(e.target.value).toFixed(2));
+        
+        panCurveSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            let label = val.toFixed(1);
+            if (Math.abs(val - 1.0) < 0.05) label += ' (linear/off)';
+            else if (val < 1.8) label += ' (light)';
+            else if (val <= 2.2) label += ' (moderate)';
+            else label += ' (strong)';
+            document.getElementById('pan-curve-val').innerText = label;
+        });
+
+        midTrimSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('mid-trim-val').innerText = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB at full pan`;
+        });
+
+        treblePanSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10);
+            let label;
+            if (val === 100) label = '+100% (Matched)';
+            else if (val === 0) label = '0% (Always Centered)';
+            else if (val === -100) label = '-100% (Fully Opposite)';
+            else label = `${val > 0 ? '+' : ''}${val}%`;
+            document.getElementById('treble-pan-val').innerText = label;
+        });
 
         // --- SONG LIBRARY & COVER ART FIX --- //
         let songs = [];
@@ -476,9 +553,6 @@
                         const info = tag.tags || {};
                         if (info.title) song.title = info.title;
                         if (info.artist) song.artist = info.artist;
-                        // format "-->" is a rare ID3 edge case meaning the "picture" is
-                        // actually a URL string, not embedded image bytes - trying to
-                        // base64-encode it would produce a broken/garbage image.
                         if (info.picture && info.picture.format !== '-->' && info.picture.data && info.picture.data.length) {
                             try {
                                 const data = info.picture.data;
@@ -496,7 +570,6 @@
                         renderSongList();
                     },
                     onError: (error) => {
-                        // No usable tags/art found - filename + placeholder art stays as-is.
                         console.warn('jsmediatags read failed for', file.name, error);
                     }
                 });
@@ -590,11 +663,26 @@
 
         cross1Slider.addEventListener('input', (e) => {
             const freq = parseFloat(e.target.value);
+            document.getElementById('cross1-val').innerText = freq + 'Hz';
             bassLowpass.forEach(f => { if(audioContext) f.frequency.setTargetAtTime(freq, audioContext.currentTime, 0.02) });
             midHighpass.forEach(f => { if(audioContext) f.frequency.setTargetAtTime(freq, audioContext.currentTime, 0.02) });
         });
+
+        cross2Slider.addEventListener('input', (e) => {
+            const freq = parseFloat(e.target.value);
+            document.getElementById('cross2-val').innerText = freq + 'Hz';
+            midLowpass.forEach(f => { if(audioContext) f.frequency.setTargetAtTime(freq, audioContext.currentTime, 0.02) });
+            trebleHighpass.forEach(f => { if(audioContext) f.frequency.setTargetAtTime(freq, audioContext.currentTime, 0.02) });
+        });
+
         crossQSlider.addEventListener('input', (e) => {
             const q = parseFloat(e.target.value);
+            let label = q.toFixed(2);
+            if (Math.abs(q - 0.71) < 0.02) label += ' (standard)';
+            else if (q < 0.71) label += ' (smooth)';
+            else label += ' (sharp)';
+            document.getElementById('crossq-val').innerText = label;
+            
             [...bassLowpass, ...midHighpass, ...midLowpass, ...trebleHighpass].forEach(f => {
                 if(audioContext) f.Q.setTargetAtTime(q, audioContext.currentTime, 0.02);
             });
@@ -648,12 +736,12 @@
         }
 
         // --- FULL SCREEN 3D VISUALIZER --- //
-        const numParticles = 250; // Increased count for full screen
+        const numParticles = 250; 
         let particles = [];
         for(let i=0; i<numParticles; i++) {
             particles.push({
                 angle: Math.random() * Math.PI * 2,
-                orbitRadius: 100 + Math.random() * (window.innerWidth / 2.5), // Expands across the whole screen
+                orbitRadius: 100 + Math.random() * (window.innerWidth / 2.5), 
                 y: (Math.random() - 0.5) * (window.innerHeight / 1.5),
                 speed: (Math.random() > 0.5 ? 1 : -1) * (0.001 + Math.random() * 0.005),
                 size: 1.5 + Math.random() * 2
@@ -666,7 +754,6 @@
 
             visualizerPan += (smoothedPan - visualizerPan) * 0.08; 
 
-            // Create light motion trails
             canvasCtx.fillStyle = 'rgba(5, 5, 5, 0.3)';
             canvasCtx.fillRect(0, 0, logicalWidth, logicalHeight);
 
@@ -676,8 +763,6 @@
                 analyser.getByteFrequencyData(audioData);
             }
 
-            // Dynamically center based on sidebar state (logical/CSS pixels - the
-            // canvas draw context is already scaled for device pixel ratio)
             const sidebarOffset = rightSidebar.classList.contains('translate-x-full') ? 0 : 420;
             const cx = (logicalWidth - sidebarOffset) / 2;
             const cy = logicalHeight / 2;
@@ -686,7 +771,7 @@
 
             let corePulse = audioData.length ? (audioData[5] / 255) * 20 : 0;
             canvasCtx.beginPath();
-            canvasCtx.arc(cx, cy, 60 + corePulse, 0, Math.PI * 2); // Larger central core
+            canvasCtx.arc(cx, cy, 60 + corePulse, 0, Math.PI * 2); 
             canvasCtx.fillStyle = isEyesClosed ? '#ffffff' : '#111111';
             canvasCtx.shadowBlur = isEyesClosed ? 50 : 0;
             canvasCtx.shadowColor = '#ffffff';
@@ -729,6 +814,7 @@
                 isTrackingStarted = true;
                 settingsCanvas.width = 320;
                 settingsCanvas.height = 240;
+                trackingToggleContainer.classList.remove('opacity-0');
                 renderVisualizer();
             }
 
@@ -755,13 +841,15 @@
                 const distToLeft = Math.abs(nose.x - leftCheek.x);
                 const distToRight = Math.abs(rightCheek.x - nose.x);
                 
-                if (distToLeft + distToRight > 0) {
+                if (isTrackingEnabled && distToLeft + distToRight > 0) {
                     let ratio = (distToRight - distToLeft) / (distToRight + distToLeft);
                     if (invertPanToggle.checked) ratio = -ratio;
                     const curveExponent = parseFloat(panCurveSlider.value);
                     const shapedRatio = Math.sign(ratio) * Math.pow(Math.abs(ratio), curveExponent);
                     const activeSensitivity = isEyesClosed ? parseFloat(sensClosedSlider.value) : parseFloat(sensOpenSlider.value);
                     targetPan = shapedRatio * activeSensitivity;
+                } else if (!isTrackingEnabled) {
+                    targetPan = 0; 
                 }
                 
                 smoothedPan += (targetPan - smoothedPan) * 0.70;
@@ -791,11 +879,6 @@
         startBtn.addEventListener('click', async () => {
             clearError();
 
-            // Camera access requires a "secure context" (https://, or localhost) in
-            // every modern browser. Opening this file directly (file://) - which is
-            // the single most common way this fails the first time on a new Mac -
-            // will make getUserMedia reject or simply not prompt at all. Catch that
-            // up front with a clear message rather than a silent failure.
             if (!window.isSecureContext) {
                 showError('Camera access needs a secure context. Serve this file (e.g. "python3 -m http.server" then open http://localhost:8000) instead of opening it directly from Finder.');
                 return;
@@ -826,7 +909,6 @@
                 } else {
                     showError('Camera could not be started. Please allow camera permissions and try again.');
                 }
-                console.error('Camera start failed:', err);
             }
         });
 
