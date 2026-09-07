@@ -3,206 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Spatial Audio Head Tracker</title>
+    <title>3D Spatial Audio | Surround</title>
     
-    <!-- Tailwind CSS for modern styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- MediaPipe Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    <!-- jsmediatags: reads ID3/FLAC tags (title, artist, embedded cover art) from local audio files -->
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        bebas: ['"Bebas Neue"', 'sans-serif'],
+                        space: ['"Space Grotesk"', 'sans-serif'],
+                    },
+                    colors: {
+                        bgmain: '#030303',
+                        bgpanel: '#0a0a0a',
+                        accent: '#ffffff', 
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- MediaPipe & MediaTags -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.7/jsmediatags.min.js"></script>
 
     <style>
-        body { background-color: #0f172a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        body { background-color: #050505; color: white; overflow: hidden; }
+        
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        .blur-text {
+            color: transparent;
+            text-shadow: 0 0 18px rgba(255,255,255,0.9);
+            transition: text-shadow 0.6s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        #pan-meter {
-            transition: width 0.1s ease, left 0.1s ease;
+        .blur-text:hover { text-shadow: 0 0 0px rgba(255,255,255,1); }
+
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Custom Slider Styling */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%;
+            background: #fff; cursor: pointer; margin-top: -5px; transition: transform 0.2s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 2px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 1px;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-6">
+<body class="h-screen w-screen flex font-space text-gray-200">
 
-    <!-- Header -->
-    <header class="text-center mb-8 mt-4">
-        <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
-            Spatial Audio Tracker
-        </h1>
-        <p class="text-slate-400 max-w-lg mx-auto">
-            Upload an audio file, turn on your camera, and move your head left and right to experience real-time spatial audio panning.
-        </p>
-    </header>
+    <!-- FULL SCREEN VISUALIZER CANVAS -->
+    <canvas id="output_canvas" class="fixed inset-0 w-full h-full z-0 transition-opacity duration-1000"></canvas>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-5xl">
+    <!-- MAIN STAGE AREA -->
+    <div id="main-stage" class="absolute inset-0 pointer-events-none z-10">
         
-        <!-- Left Column: Camera & Vision -->
-        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl">
-            <h2 class="text-xl font-semibold mb-4 text-slate-200">Vision Engine</h2>
+        <!-- Brutalist Header -->
+        <div class="absolute top-12 left-12 flex flex-col leading-none cursor-default select-none pointer-events-auto">
+            <h1 class="text-[6rem] font-bebas tracking-tighter text-white uppercase blur-text transition-all duration-500">LISTEN IN</h1>
+            <h1 class="text-[6rem] font-bebas tracking-tighter text-white uppercase blur-text -mt-6 transition-all duration-500">SURROUND</h1>
+        </div>
+
+        <!-- Open Library Button -->
+        <button id="open-sidebar" class="absolute top-12 right-12 z-20 w-12 h-12 rounded-full border border-white/20 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-500 hover:scale-110 glass-panel pointer-events-auto opacity-0 translate-x-4">
+            <i class="ph ph-list text-xl"></i>
+        </button>
+        
+        <!-- Start Overlay -->
+        <div id="start-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-md pointer-events-auto transition-opacity duration-500">
+            <video id="input_video" class="hidden"></video>
             
-            <!-- Video/Canvas Container -->
-            <div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden border border-slate-700 shadow-inner mb-4">
-                <!-- Hidden video element for MediaPipe -->
-                <video id="input_video" class="hidden"></video>
-                <!-- Canvas to display the video and face mesh -->
-                <canvas id="output_canvas" class="absolute inset-0 w-full h-full object-cover"></canvas>
-                
-                <!-- Loading Overlay -->
-                <div id="loading-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10 hidden">
-                    <svg class="animate-spin h-10 w-10 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p class="text-blue-400 font-medium">Initializing AI Models...</p>
-                </div>
+            <button id="start-btn" class="px-8 py-4 border border-white/30 rounded-full hover:bg-white hover:text-black hover:scale-105 font-space font-semibold tracking-widest text-xs uppercase transition-all duration-500 shadow-[0_0_15px_rgba(255,255,255,0)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                START LISTENING
+            </button>
+            <div id="loading-overlay" class="hidden flex-col items-center mt-4 opacity-0 transition-opacity duration-500">
+                <i class="ph ph-spinner animate-spin text-2xl text-white mb-2"></i>
+                <p class="text-[10px] font-space tracking-widest uppercase text-gray-400">Selling your data to China</p>
             </div>
+            <p id="error-msg" class="hidden mt-6 max-w-xs text-center text-[10px] font-space tracking-widest uppercase text-red-400/90 leading-relaxed"></p>
+        </div>
+    </div>
 
-            <!-- Controls (Invert + Start) -->
-            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
-                <!-- Invert Panning Toggle -->
-                <div class="flex items-center bg-slate-800 p-3 rounded-xl border border-slate-700 w-full sm:w-auto">
-                    <input type="checkbox" id="invert-pan" checked class="w-4 h-4 text-purple-600 bg-slate-900 border-slate-600 rounded focus:ring-purple-500 cursor-pointer">
-                    <label for="invert-pan" class="ml-2 text-sm font-medium text-slate-300 cursor-pointer select-none">Invert Panning</label>
-                </div>
-                
-                <!-- Start Camera Button -->
-                <button id="start-btn" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/30">
-                    Start Camera
-                </button>
+    <!-- RIGHT SIDEBAR (Library & Player) -->
+    <div id="right-sidebar" class="w-[420px] h-full fixed top-0 right-0 glass-panel flex flex-col p-10 z-40 shadow-2xl transform transition-transform duration-700 ease-out translate-x-0">
+        
+        <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
+            <button id="close-sidebar" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2 group">
+                <i class="ph ph-arrow-right text-xl group-hover:translate-x-2 transition-transform duration-300"></i>
+                <span class="text-[10px] font-space font-bold tracking-[0.2em] uppercase">Hide</span>
+            </button>
+            <span class="text-[10px] font-space font-bold tracking-[0.2em] text-gray-500 uppercase">Library</span>
+        </div>
+
+        <!-- Cover Art -->
+        <div class="w-full aspect-square bg-[#0a0a0a] rounded-xl overflow-hidden mb-8 shadow-2xl border border-white/5 relative group flex items-center justify-center">
+            <img id="ui-cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' font-size='40' fill='%23333' text-anchor='middle' dominant-baseline='middle'%3E%E2%99%AC%3C/text%3E%3C/svg%3E" onerror="handleArtError(this)" class="w-full h-full object-cover transition-all duration-700 group-hover:scale-105" alt="Cover Art">
+        </div>
+        
+        <!-- Track Info -->
+        <div class="mb-6">
+            <h3 id="ui-title" class="text-2xl font-space font-bold text-white tracking-tight mb-1 truncate leading-none transition-colors">NO MEDIA</h3>
+            <p id="ui-artist" class="text-gray-500 text-[11px] font-space tracking-widest uppercase truncate">Add Media to start Listening</p>
+        </div>
+
+        <!-- Custom Seek Bar -->
+        <div class="mb-6 group">
+            <div id="progress-container" class="w-full h-1 bg-white/10 relative cursor-pointer overflow-hidden rounded-full transition-all hover:h-1.5">
+                <div id="progress-bar" class="absolute top-0 left-0 h-full bg-white w-0 transition-all duration-100 ease-linear shadow-[0_0_10px_#fff]"></div>
             </div>
-            <div id="error-msg" class="text-red-400 mb-4 text-sm hidden text-center"></div>
-
-            <!-- DEV TOOLS -->
-            <div class="bg-indigo-900/30 border border-indigo-500/30 rounded-xl p-4 mt-auto space-y-4">
-                <!-- Panning Sensitivity (per eye-state) -->
-                <div>
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>[DEV] Eyes Open Sensitivity</span>
-                        <span id="sens-open-val">0.7</span>
-                    </label>
-                    <input type="range" id="sens-open-slider" min="0.1" max="5.0" step="0.1" value="0.7" class="w-full accent-indigo-500 cursor-pointer mb-4">
-
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>[DEV] Eyes Closed Sensitivity</span>
-                        <span id="sens-closed-val">1.3</span>
-                    </label>
-                    <input type="range" id="sens-closed-slider" min="0.1" max="5.0" step="0.1" value="1.3" class="w-full accent-indigo-500 cursor-pointer mb-1">
-                    <p class="text-xs text-indigo-400/70">Whichever sensitivity applies live-switches the instant your eye state changes.</p>
-                </div>
-
-                <!-- Pan Acceleration Curve -->
-                <div class="pt-2 border-t border-indigo-500/30">
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>[DEV] Pan Curve (Center Damping)</span>
-                        <span id="pan-curve-val">1.8 (moderate)</span>
-                    </label>
-                    <input type="range" id="pan-curve-slider" min="1.0" max="3.0" step="0.1" value="1.8" class="w-full accent-indigo-500 cursor-pointer mb-1">
-                    <p class="text-xs text-indigo-400/70">Mouse-acceleration style curve: small head turns near center move the pan very little; turning further ramps up toward full sensitivity. 1.0 = linear/off (old behavior).</p>
-                </div>
-                
-                <!-- Eye Tracking Threshold -->
-                <div class="pt-2 border-t border-indigo-500/30">
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>[DEV] Eye Close Threshold (EAR)</span>
-                        <span id="ear-val">0.26</span>
-                    </label>
-                    <input type="range" id="ear-slider" min="0.10" max="0.40" step="0.01" value="0.26" class="w-full accent-indigo-500 cursor-pointer">
-                    <p class="text-xs text-indigo-400/70 mt-2">
-                        Current EAR: <span id="current-ear-text" class="font-bold text-white bg-indigo-900/50 px-2 py-0.5 rounded">0.00</span>
-                    </p>
-                </div>
-
-                <!-- 3-Band Crossover Controls -->
-                <div class="pt-2 border-t border-indigo-500/30">
-                    <p class="text-xs uppercase tracking-wide text-indigo-400/70 mb-3">[DEV] 3-Band Crossover</p>
-
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>Bass / Mid Crossover</span>
-                        <span id="cross1-val">300 Hz</span>
-                    </label>
-                    <input type="range" id="cross1-slider" min="60" max="500" step="10" value="300" class="w-full accent-indigo-500 cursor-pointer mb-4">
-
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>Mid / Treble Crossover</span>
-                        <span id="cross2-val">4700 Hz</span>
-                    </label>
-                    <input type="range" id="cross2-slider" min="1000" max="8000" step="100" value="4700" class="w-full accent-indigo-500 cursor-pointer mb-4">
-
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>Crossover Smoothness (Q)</span>
-                        <span id="crossq-val">0.30 (smooth)</span>
-                    </label>
-                    <input type="range" id="crossq-slider" min="0.30" max="2.00" step="0.01" value="0.30" class="w-full accent-indigo-500 cursor-pointer mb-1">
-                    <p class="text-xs text-indigo-400/70 mb-4">Lower = wider, gentler blend between bands. Higher = tighter, more defined split.</p>
-
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>Mid Pan Attenuation</span>
-                        <span id="mid-trim-val">-0.5 dB at full pan</span>
-                    </label>
-                    <input type="range" id="mid-trim-slider" min="-6" max="3" step="0.5" value="-0.5" class="w-full accent-indigo-500 cursor-pointer mb-1">
-                    <p class="text-xs text-indigo-400/70 mb-4">Equal-power panning naturally lifts the near-ear mid/vocal band by up to +3dB as you turn. This trims dB off that rise (negative = tame it, e.g. -3 roughly cancels it out; 0 = untouched).</p>
-
-                    <label class="block text-sm font-medium text-indigo-300 mb-2 flex justify-between">
-                        <span>Treble Pan Behavior</span>
-                        <span id="treble-pan-val">-100% (Fully Opposite)</span>
-                    </label>
-                    <input type="range" id="treble-pan-slider" min="-100" max="100" step="5" value="-100" class="w-full accent-indigo-500 cursor-pointer mb-1">
-                    <p class="text-xs text-indigo-400/70">-100 = treble panned opposite to mids &middot; 0 = treble always centered &middot; +100 = treble follows mids exactly</p>
-                </div>
+            <div class="flex justify-between mt-2 text-[9px] font-space font-bold tracking-widest text-gray-500">
+                <span id="time-current">0:00</span>
+                <span id="time-total">0:00</span>
             </div>
         </div>
 
-        <!-- Right Column: Audio & Controls -->
-        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl">
-            <h2 class="text-xl font-semibold mb-4 text-slate-200">Audio Engine</h2>
+        <!-- Playlist -->
+        <div id="song-list" class="flex-1 overflow-y-auto space-y-1 mb-8 border-t border-white/10 pt-4 pr-2">
+            <p id="song-list-empty" class="text-[10px] font-space tracking-widest uppercase text-gray-600 text-center mt-6">Queue Empty</p>
+        </div>
+
+        <!-- Custom Audio Player Controls -->
+        <div class="flex items-center justify-between border-t border-white/10 pt-6 mt-auto">
+            <audio id="audio-player" class="hidden"></audio>
+            <input type="file" id="audio-upload" accept="audio/*" multiple class="hidden">
             
-            <!-- Song Library -->
-            <div class="mb-6">
-                <div class="flex items-center justify-between mb-3">
-                    <label class="text-sm font-medium text-slate-400">Your Songs</label>
-                    <label for="audio-upload" class="cursor-pointer w-7 h-7 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-500 text-white text-lg font-bold leading-none transition-all" title="Add song(s)">+</label>
-                    <input type="file" id="audio-upload" accept="audio/*" multiple class="hidden">
+            <button id="btn-play" class="w-12 h-12 flex items-center justify-center rounded-full border border-white/20 hover:border-white hover:text-black hover:bg-white hover:scale-110 text-white transition-all duration-300 shadow-lg">
+                <i class="ph-fill ph-play text-lg transition-transform" id="play-icon"></i>
+            </button>
+            
+            <div class="flex gap-2">
+                <button id="btn-add" class="w-10 h-10 flex items-center justify-center rounded-full border border-transparent hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-300">
+                    <i class="ph ph-plus text-lg"></i>
+                </button>
+                <button id="btn-settings" class="w-10 h-10 flex items-center justify-center rounded-full border border-transparent hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-300">
+                    <i class="ph ph-sliders text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HIDDEN DEV SETTINGS PANEL -->
+    <div id="settings-panel" class="absolute inset-y-0 right-0 w-[420px] bg-bgpanel/95 backdrop-blur-3xl border-l border-white/10 p-8 overflow-y-auto transform translate-x-full transition-transform duration-500 ease-out z-50 shadow-2xl">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-space font-bold text-white tracking-tight">Settings</h2>
+            <button id="close-settings" class="w-8 h-8 flex items-center justify-center rounded-md border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"><i class="ph ph-x text-sm"></i></button>
+        </div>
+
+        <div class="mb-8 w-full aspect-video bg-black rounded-lg border border-white/10 overflow-hidden relative shadow-inner group">
+            <canvas id="settings-canvas" class="w-full h-full object-cover transform -scale-x-100 opacity-60 transition-opacity duration-300 group-hover:opacity-100"></canvas>
+            <div class="absolute top-2 left-2 px-2 py-1 bg-black/50 backdrop-blur text-[9px] tracking-widest uppercase font-bold text-gray-400 rounded">Camera Input</div>
+        </div>
+
+        <div class="space-y-8">
+            <div>
+                <p class="text-[10px] font-space font-bold tracking-[0.1em] text-gray-500 uppercase mb-4">Tracking</p>
+                <div class="mb-5">
+                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
+                        <span>Sensitivity</span><span id="sens-open-val" class="text-white">0.7</span>
+                    </label>
+                    <input type="range" id="sens-open-slider" min="0.1" max="5.0" step="0.1" value="0.7">
                 </div>
-                <div id="song-list" class="space-y-1 max-h-56 overflow-y-auto pr-1">
-                    <p id="song-list-empty" class="text-xs text-slate-500 italic px-1">No songs yet — tap + to add some (MP3/FLAC work best for cover art).</p>
+                <div class="flex items-center justify-between mb-5">
+                    <label for="invert-pan" class="text-xs font-space font-medium text-gray-300 cursor-pointer">Invert head direction</label>
+                    <input type="checkbox" id="invert-pan" checked class="w-4 h-4 bg-transparent border-white/30 rounded cursor-pointer accent-white">
                 </div>
             </div>
 
-            <!-- Audio Player UI -->
-            <div class="bg-slate-800 rounded-xl p-4 mb-8">
-                <audio id="audio-player" class="w-full mb-2" controls loop></audio>
-                <p class="text-xs text-slate-500 text-center">Note: Audio context requires you to press play manually after starting the camera.</p>
-            </div>
+            <div class="w-full h-px bg-white/5"></div>
 
-            <!-- Panning Visualizer -->
-            <div class="mt-auto">
-                <h3 class="text-sm font-medium text-slate-400 mb-4 flex justify-between">
-                    <span>Left Ear</span>
-                    <span id="pan-text" class="text-blue-400 font-bold">Center (0.00)</span>
-                    <span>Right Ear</span>
-                </h3>
-                
-                <!-- Meter Background -->
-                <div class="relative w-full h-8 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                    <!-- Center Line -->
-                    <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-600 z-10"></div>
-                    <!-- Dynamic Pan Bar -->
-                    <div id="pan-meter" class="absolute top-0 bottom-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style="width: 10px; left: calc(50% - 5px);"></div>
-                </div>
-
-                <!-- Eye State Indicator -->
-                <div class="mt-6 flex justify-between items-center text-sm font-medium text-slate-400 border-t border-slate-700 pt-4">
-                    <span>Vision Status</span>
-                    <span id="eye-state-text" class="text-green-400 font-bold px-3 py-1 bg-slate-900 rounded-full shadow-inner border border-slate-700">EYES OPEN</span>
+            <div>
+                <p class="text-[10px] font-space font-bold tracking-[0.1em] text-gray-500 uppercase mb-4">Eyes</p>
+                <div class="mb-5">
+                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
+                        <span>Blink threshold (EAR)</span><span id="ear-val" class="text-white">0.26</span>
+                    </label>
+                    <input type="range" id="ear-slider" min="0.10" max="0.40" step="0.01" value="0.26">
+                    <p class="text-[9px] text-gray-500 mt-2 text-right tracking-widest uppercase">Live: <span id="current-ear-text" class="text-white font-bold">0.00</span></p>
                 </div>
             </div>
+            
+            <div class="w-full h-px bg-white/5"></div>
+
+            <div>
+                <p class="text-[10px] font-space font-bold tracking-[0.1em] text-gray-500 uppercase mb-4">Sound</p>
+                <div class="mb-5">
+                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
+                        <span>Bass / mid crossover</span><span id="cross1-val" class="text-white">300Hz</span>
+                    </label>
+                    <input type="range" id="cross1-slider" min="60" max="500" step="10" value="300">
+                </div>
+                <div class="mb-5">
+                    <label class="block text-xs font-space font-medium text-gray-300 mb-3 flex justify-between">
+                        <span>Crossover smoothness</span><span id="crossq-val" class="text-white">0.30</span>
+                    </label>
+                    <input type="range" id="crossq-slider" min="0.30" max="2.00" step="0.01" value="0.30">
+                </div>
+            </div>
+
+            <input type="hidden" id="sens-closed-slider" value="1.3">
+            <input type="hidden" id="pan-curve-slider" value="1.8">
+            <input type="hidden" id="cross2-slider" value="4700">
+            <input type="hidden" id="mid-trim-slider" value="-0.5">
+            <input type="hidden" id="treble-pan-slider" value="-100">
         </div>
     </div>
 
@@ -211,650 +233,600 @@
         const videoElement = document.getElementById('input_video');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
+        
+        const settingsCanvas = document.getElementById('settings-canvas');
+        const settingsCtx = settingsCanvas.getContext('2d');
+        let isSettingsOpen = false;
+
         const startBtn = document.getElementById('start-btn');
+        const startOverlay = document.getElementById('start-overlay');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const errorMsgEl = document.getElementById('error-msg');
+
+        const rightSidebar = document.getElementById('right-sidebar');
+        const openSidebarBtn = document.getElementById('open-sidebar');
+        const closeSidebarBtn = document.getElementById('close-sidebar');
+
+        const btnPlay = document.getElementById('btn-play');
+        const playIcon = document.getElementById('play-icon');
+        const btnAdd = document.getElementById('btn-add');
+        const btnSettings = document.getElementById('btn-settings');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeSettings = document.getElementById('close-settings');
+        
         const audioUpload = document.getElementById('audio-upload');
         const audioPlayer = document.getElementById('audio-player');
-        const panMeter = document.getElementById('pan-meter');
-        const panText = document.getElementById('pan-text');
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const errorMsg = document.getElementById('error-msg');
-        
-        // NEW: Missing Dev Tools & Toggle Elements
+        const uiTitle = document.getElementById('ui-title');
+        const uiArtist = document.getElementById('ui-artist');
+        const uiCover = document.getElementById('ui-cover');
+
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const timeCurrent = document.getElementById('time-current');
+        const timeTotal = document.getElementById('time-total');
+
         const invertPanToggle = document.getElementById('invert-pan');
         const sensOpenSlider = document.getElementById('sens-open-slider');
         const sensClosedSlider = document.getElementById('sens-closed-slider');
-        const panCurveSlider = document.getElementById('pan-curve-slider');
         const earSlider = document.getElementById('ear-slider');
         const currentEarText = document.getElementById('current-ear-text');
-        
-        // NEW: Get the span elements to update the text
-        const sensOpenValText = document.getElementById('sens-open-val');
-        const sensClosedValText = document.getElementById('sens-closed-val');
-        const panCurveValText = document.getElementById('pan-curve-val');
-        const earValText = document.getElementById('ear-val');
 
-        // 3-Band crossover controls
+        const panCurveSlider = document.getElementById('pan-curve-slider');
         const cross1Slider = document.getElementById('cross1-slider');
         const cross2Slider = document.getElementById('cross2-slider');
         const crossQSlider = document.getElementById('crossq-slider');
         const midTrimSlider = document.getElementById('mid-trim-slider');
         const treblePanSlider = document.getElementById('treble-pan-slider');
-        const cross1ValText = document.getElementById('cross1-val');
-        const cross2ValText = document.getElementById('cross2-val');
-        const crossQValText = document.getElementById('crossq-val');
-        const midTrimValText = document.getElementById('mid-trim-val');
-        const treblePanValText = document.getElementById('treble-pan-val');
 
-        // Web Audio API Variables
-        let audioContext = null;
-        let track = null;
-        let gainNode = null;
-        let midPanner = null;    // Native equal-power stereo pan for the MID/vocal band - follows head tracking directly
-        let midTrimGain = null;  // Trims dB off the mid band as it pans - tames the natural +3dB near-channel rise
-        let treblePanner = null; // Independent stereo pan for the TREBLE band - follows head tracking scaled by treblePanFactor
-        // Crossover filter arrays: each is [stage1, stage2] forming a 4th-order (LR4-style) filter.
-        // Frequency and Q on these are live-tunable via the DEV sliders (no graph rebuild needed).
-        let bassLowpass = [];    // < crossover1, always centered/mono
-        let midHighpass = [];    // > crossover1 (bottom edge of the mid band)
-        let midLowpass = [];     // < crossover2 (top edge of the mid band)
-        let trebleHighpass = []; // > crossover2, panned independently
-        let mixBus = null;
-        let bassGain = null; // Compensates bass loudness so it doesn't thin out relative to the panned mid band
-        let limiter = null; // Transparent safety limiter, prevents digital clipping
-        let eqNodes = [];
-        let audioInitialized = false;
-
-        // V-Shape EQ Preset Data (From User Specs)
-        const eqData = [
-            { type: 'lowshelf', freq: 105.0, gain: 4.8, Q: 0.70 },
-            { type: 'peaking', freq: 126.4, gain: 1.6, Q: 3.42 },
-            { type: 'peaking', freq: 251.0, gain: 6.4, Q: 0.69 },
-            { type: 'peaking', freq: 342.0, gain: -1.9, Q: 2.32 },
-            { type: 'peaking', freq: 855.4, gain: -2.7, Q: 2.53 },
-            { type: 'peaking', freq: 1942.8, gain: -4.8, Q: 0.39 },
-            { type: 'peaking', freq: 3617.6, gain: 1.0, Q: 3.71 },
-            { type: 'peaking', freq: 5646.4, gain: -1.2, Q: 4.71 },
-            { type: 'peaking', freq: 10000.0, gain: 2.9, Q: 1.12 },
-            { type: 'highshelf', freq: 10000.0, gain: 5.1, Q: 0.70 }
-        ];
-
-        // Add a global variable to keep track of the smoothed panning value and eye state
-        let smoothedPan = 0;
+        // Global State
+        let targetPan = 0;
+        let smoothedPan = 0; 
+        let visualizerPan = 0; 
         let isEyesClosed = false;
+        let isPlaying = false;
+        let isTrackingStarted = false;
 
-        // --- UI EVENT LISTENERS --- //
+        // Actual capture resolution requested from the webcam - MediaPipe's landmark
+        // x/y coordinates are normalized (0-1) against this frame, so any pixel-distance
+        // math (EAR calculation) must scale back using these exact numbers, not the
+        // on-screen canvas size, or the aspect ratio gets skewed.
+        const VIDEO_CAPTURE_WIDTH = 640;
+        const VIDEO_CAPTURE_HEIGHT = 480;
 
-        // Update Sensitivity Text on Slider Input (per eye-state)
-        sensOpenSlider.addEventListener('input', (e) => {
-            sensOpenValText.innerText = parseFloat(e.target.value).toFixed(1);
-        });
-        sensClosedSlider.addEventListener('input', (e) => {
-            sensClosedValText.innerText = parseFloat(e.target.value).toFixed(1);
-        });
+        // Raw pixel distance between two normalized landmarks, scaled back to the
+        // actual capture frame dimensions (not a single square constant) so the EAR
+        // ratio isn't skewed by the 640x480 (4:3) aspect ratio. Defined once here
+        // instead of as a closure recreated on every single onResults() frame.
+        const getDist = (p1, p2) => Math.hypot(
+            (p1.x - p2.x) * VIDEO_CAPTURE_WIDTH,
+            (p1.y - p2.y) * VIDEO_CAPTURE_HEIGHT
+        );
 
-        // Update Pan Curve Text on Slider Input
-        panCurveSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            let label = val.toFixed(1);
-            if (Math.abs(val - 1.0) < 0.05) label += ' (linear/off)';
-            else if (val < 1.8) label += ' (light)';
-            else if (val <= 2.2) label += ' (moderate)';
-            else label += ' (strong)';
-            panCurveValText.innerText = label;
-        });
-
-        // Update EAR Threshold Text on Slider Input
-        earSlider.addEventListener('input', (e) => {
-            earValText.innerText = parseFloat(e.target.value).toFixed(2);
-        });
-
-        // Helper: click-free live parameter update (used for all crossover tinkering below)
-        function smoothSet(audioParam, value, timeConstant = 0.02) {
-            if (audioContext && audioParam) {
-                audioParam.setTargetAtTime(value, audioContext.currentTime, timeConstant);
-            }
+        // Shows a plain-language error under the start button - camera permission
+        // issues (very common on macOS the first time a browser asks for camera
+        // access, or when the page is opened as a local file instead of via a
+        // server) otherwise fail completely silently.
+        function showError(msg) {
+            if (!errorMsgEl) return;
+            errorMsgEl.textContent = msg;
+            errorMsgEl.classList.remove('hidden');
+        }
+        function clearError() {
+            if (!errorMsgEl) return;
+            errorMsgEl.classList.add('hidden');
         }
 
-        // Bass/Mid crossover frequency - live-tunable, no graph rebuild needed
-        cross1Slider.addEventListener('input', (e) => {
-            const freq = parseFloat(e.target.value);
-            cross1ValText.innerText = `${freq} Hz`;
-            bassLowpass.forEach(f => smoothSet(f.frequency, freq));
-            midHighpass.forEach(f => smoothSet(f.frequency, freq));
+        // Shared fallback for any album art <img> (cover box or playlist thumbnails):
+        // if a data URI ever fails to decode, drop back to the placeholder art instead
+        // of showing a broken-image icon. Declared as a real global function (not an
+        // arrow/const) so inline onerror="" attributes built via innerHTML can call it.
+        function handleArtError(imgEl) {
+            imgEl.onerror = null; // prevent any possible loop if the placeholder itself ever failed
+            imgEl.src = PLACEHOLDER_ART;
+        }
+
+        // Ensure canvas stays full screen even when window is resized, and render at
+        // native pixel density so the particle visualizer stays crisp on Retina/HiDPI
+        // displays (effectively all current Macs) instead of looking soft/blurry.
+        let logicalWidth = window.innerWidth;
+        let logicalHeight = window.innerHeight;
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            logicalWidth = window.innerWidth;
+            logicalHeight = window.innerHeight;
+            canvasElement.width = logicalWidth * dpr;
+            canvasElement.height = logicalHeight * dpr;
+            canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Set initial size
+
+        // --- SIDEBAR TOGGLES --- //
+        openSidebarBtn.addEventListener('click', () => {
+            rightSidebar.classList.remove('translate-x-full');
+            openSidebarBtn.classList.add('opacity-0', 'translate-x-4', 'pointer-events-none');
+        });
+        
+        closeSidebarBtn.addEventListener('click', () => {
+            rightSidebar.classList.add('translate-x-full');
+            openSidebarBtn.classList.remove('opacity-0', 'translate-x-4', 'pointer-events-none');
+        });
+        
+        btnSettings.addEventListener('click', () => {
+            settingsPanel.classList.remove('translate-x-full');
+            isSettingsOpen = true;
+        });
+        closeSettings.addEventListener('click', () => {
+            settingsPanel.classList.add('translate-x-full');
+            isSettingsOpen = false;
         });
 
-        // Mid/Treble crossover frequency - live-tunable, no graph rebuild needed
-        cross2Slider.addEventListener('input', (e) => {
-            const freq = parseFloat(e.target.value);
-            cross2ValText.innerText = `${freq} Hz`;
-            midLowpass.forEach(f => smoothSet(f.frequency, freq));
-            trebleHighpass.forEach(f => smoothSet(f.frequency, freq));
+        // --- AUDIO CONTROLS & SEEKBAR --- //
+        btnAdd.addEventListener('click', () => audioUpload.click());
+
+        btnPlay.addEventListener('click', () => {
+            if (!currentSongId) return;
+            if (isPlaying) audioPlayer.pause();
+            else {
+                if (!audioInitialized) initAudio();
+                audioPlayer.play();
+            }
         });
 
-        // Crossover smoothness (Q) - lower = wider/gentler blend zone between bands, higher = tighter split
-        crossQSlider.addEventListener('input', (e) => {
-            const q = parseFloat(e.target.value);
-            let label = q.toFixed(2);
-            if (Math.abs(q - 0.71) < 0.02) label += ' (standard)';
-            else if (q < 0.71) label += ' (smooth)';
-            else label += ' (sharp)';
-            crossQValText.innerText = label;
-            [...bassLowpass, ...midHighpass, ...midLowpass, ...trebleHighpass].forEach(f => smoothSet(f.Q, q));
+        audioPlayer.addEventListener('play', () => {
+            isPlaying = true;
+            playIcon.classList.replace('ph-play', 'ph-pause');
+        });
+        
+        audioPlayer.addEventListener('pause', () => {
+            isPlaying = false;
+            playIcon.classList.replace('ph-pause', 'ph-play');
         });
 
-        // Mid Pan Attenuation - just updates the label; actual application happens live in
-        // updateAudioPan() every frame (it needs the current pan progress to scale correctly).
-        midTrimSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            midTrimValText.innerText = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB at full pan`;
+        function formatTime(secs) {
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        audioPlayer.addEventListener('timeupdate', () => {
+            const current = audioPlayer.currentTime;
+            const duration = audioPlayer.duration || 0;
+            if(duration > 0) {
+                progressBar.style.width = `${(current / duration) * 100}%`;
+                timeCurrent.innerText = formatTime(current);
+                timeTotal.innerText = formatTime(duration);
+            }
         });
 
-        // Treble Pan Behavior - just updates the label; actual application happens live in
-        // updateAudioPan() every frame, so no direct audio param push is needed here.
-        treblePanSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value, 10);
-            let label;
-            if (val === 100) label = '+100% (Matched)';
-            else if (val === 0) label = '0% (Always Centered)';
-            else if (val === -100) label = '-100% (Fully Opposite)';
-            else label = `${val > 0 ? '+' : ''}${val}%`;
-            treblePanValText.innerText = label;
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            if(audioPlayer.duration) audioPlayer.currentTime = pos * audioPlayer.duration;
         });
 
-        // --- SONG LIBRARY --- //
-        // songs: { id, file, title, artist, artUrl, audioUrl }
+        sensOpenSlider.addEventListener('input', (e) => document.getElementById('sens-open-val').innerText = parseFloat(e.target.value).toFixed(1));
+        earSlider.addEventListener('input', (e) => document.getElementById('ear-val').innerText = parseFloat(e.target.value).toFixed(2));
+        cross1Slider.addEventListener('input', (e) => document.getElementById('cross1-val').innerText = e.target.value + 'Hz');
+        crossQSlider.addEventListener('input', (e) => document.getElementById('crossq-val').innerText = parseFloat(e.target.value).toFixed(2));
+
+        // --- SONG LIBRARY & COVER ART FIX --- //
         let songs = [];
         let currentSongId = null;
         const songListEl = document.getElementById('song-list');
         const songListEmptyEl = document.getElementById('song-list-empty');
-
-        // Small inline SVG placeholder cover (rounded square + music note) - used until/unless
-        // jsmediatags finds embedded art, and permanently for files with no embedded art at all.
-        const PLACEHOLDER_ART = 'data:image/svg+xml,' + encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
-            '<rect width="40" height="40" rx="8" fill="#334155"/>' +
-            '<text x="50%" y="58%" font-size="18" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">&#9834;</text>' +
-            '</svg>'
-        );
+        const PLACEHOLDER_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' font-size='40' fill='%23333' text-anchor='middle' dominant-baseline='middle'%3E%E2%99%AC%3C/text%3E%3C/svg%3E";
 
         function renderSongList() {
-            songListEl.querySelectorAll('.song-item').forEach(el => el.remove());
+            songListEl.innerHTML = '';
             songListEmptyEl.style.display = songs.length ? 'none' : 'block';
             songs.forEach(song => {
                 const item = document.createElement('div');
                 const isActive = song.id === currentSongId;
-                item.className = 'song-item flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-slate-800 transition-all' + (isActive ? ' bg-slate-800' : '');
+                
+                item.className = `flex items-center gap-3 p-2 rounded-lg cursor-pointer border border-transparent transition-all duration-300 ${isActive ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`;
                 item.innerHTML = `
-                    <img src="${song.artUrl}" class="w-10 h-10 rounded-md object-cover bg-slate-700 flex-shrink-0" alt="">
+                    <img src="${song.artUrl}" onerror="handleArtError(this)" class="w-9 h-9 rounded-md object-cover bg-black/40 flex-shrink-0" alt="">
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium truncate ${isActive ? 'text-purple-300' : 'text-slate-200'}">${song.title}</p>
-                        <p class="text-xs text-slate-500 truncate">${song.artist}</p>
+                        <p class="text-[12px] font-space font-medium truncate ${isActive ? 'text-white' : 'text-gray-400'}">${song.title}</p>
+                        <p class="text-[9px] font-space tracking-widest uppercase text-gray-500 truncate mt-0.5">${song.artist}</p>
                     </div>
-                    ${isActive ? '<span class="text-purple-400 flex-shrink-0 text-sm">&#9835;</span>' : ''}
+                    ${isActive ? '<div class="w-1 h-1 rounded-full bg-white ml-1 flex-shrink-0 shadow-[0_0_5px_#fff]"></div>' : ''}
                 `;
                 item.addEventListener('click', () => selectSong(song.id, true));
                 songListEl.appendChild(item);
             });
         }
 
-        // Loads a song into the player. autoplay=true (e.g. user clicked it) actually starts
-        // playback; autoplay=false just loads it silently (used for the very first song added,
-        // so the player has something in it without surprising anyone with sudden audio).
         function selectSong(id, autoplay) {
             const song = songs.find(s => s.id === id);
             if (!song) return;
             currentSongId = id;
             audioPlayer.src = song.audioUrl;
+            
+            uiTitle.innerText = song.title;
+            uiArtist.innerText = song.artist;
+            uiCover.src = song.artUrl;
+
             if (autoplay) {
                 if (!audioInitialized) initAudio();
-                audioPlayer.play().catch(() => { /* browser blocked autoplay - user can hit the native play button */ });
+                audioPlayer.play().catch(() => {});
             }
             renderSongList();
         }
 
         function addSongFromFile(file) {
             const id = `${file.name}-${file.size}-${file.lastModified}`;
-            if (songs.some(s => s.id === id)) return; // skip exact duplicates
-
+            if (songs.some(s => s.id === id)) return; 
             const audioUrl = URL.createObjectURL(file);
             const song = {
-                id,
-                file,
-                title: file.name.replace(/\.[^/.]+$/, ''), // filename minus extension, until/unless tags say otherwise
+                id, file,
+                title: file.name.replace(/\.[^/.]+$/, ''),
                 artist: 'Unknown Artist',
                 artUrl: PLACEHOLDER_ART,
                 audioUrl,
             };
             songs.push(song);
-            if (!currentSongId) selectSong(song.id, false); // first song added just gets loaded, not played
+            if (!currentSongId) selectSong(song.id, false);
             renderSongList();
 
-            // Best-effort tag read (title/artist/embedded cover) - purely additive, UI already
-            // works fine without it via the filename + placeholder art fallback above.
             if (window.jsmediatags) {
                 window.jsmediatags.read(file, {
                     onSuccess: (tag) => {
                         const info = tag.tags || {};
                         if (info.title) song.title = info.title;
                         if (info.artist) song.artist = info.artist;
-                        if (info.picture) {
-                            const { data, format } = info.picture;
-                            const blob = new Blob([new Uint8Array(data)], { type: format });
-                            song.artUrl = URL.createObjectURL(blob);
+                        // format "-->" is a rare ID3 edge case meaning the "picture" is
+                        // actually a URL string, not embedded image bytes - trying to
+                        // base64-encode it would produce a broken/garbage image.
+                        if (info.picture && info.picture.format !== '-->' && info.picture.data && info.picture.data.length) {
+                            try {
+                                const data = info.picture.data;
+                                const format = info.picture.format;
+                                let base64String = "";
+                                for (let i = 0; i < data.length; i++) {
+                                    base64String += String.fromCharCode(data[i]);
+                                }
+                                song.artUrl = `data:${format};base64,${window.btoa(base64String)}`;
+                                if (currentSongId === song.id) uiCover.src = song.artUrl;
+                            } catch (e) {
+                                console.warn('Could not decode embedded cover art, keeping placeholder:', e);
+                            }
                         }
                         renderSongList();
                     },
-                    onError: () => { /* no tags found - filename + placeholder art stays as-is */ },
+                    onError: (error) => {
+                        // No usable tags/art found - filename + placeholder art stays as-is.
+                        console.warn('jsmediatags read failed for', file.name, error);
+                    }
                 });
             }
         }
 
-        // --- AUDIO ENGINE --- //
-        
-        // Handle File Upload (supports selecting multiple files at once, and can be used
-        // repeatedly to keep adding more songs to the library)
         audioUpload.addEventListener('change', function(e) {
             Array.from(e.target.files || []).forEach(addSongFromFile);
-            e.target.value = ''; // allows re-selecting the same file again later if needed
+            e.target.value = ''; 
         });
 
-        // Initialize Audio Context (Must be triggered by user interaction)
+        // --- AUDIO ENGINE --- //
+        let audioContext = null, track = null, gainNode = null, midPanner = null, midTrimGain = null;
+        let treblePanner = null, bassLowpass = [], midHighpass = [], midLowpass = [], trebleHighpass = [];
+        let mixBus = null, bassGain = null, limiter = null, eqNodes = [];
+        let analyser = null; 
+        let audioInitialized = false;
+
+        const eqData = [
+            { type: 'lowshelf', freq: 105.0, gain: 4.8, Q: 0.70 }, { type: 'peaking', freq: 126.4, gain: 1.6, Q: 3.42 },
+            { type: 'peaking', freq: 251.0, gain: 6.4, Q: 0.69 }, { type: 'peaking', freq: 342.0, gain: -1.9, Q: 2.32 },
+            { type: 'peaking', freq: 855.4, gain: -2.7, Q: 2.53 }, { type: 'peaking', freq: 1942.8, gain: -4.8, Q: 0.39 },
+            { type: 'peaking', freq: 3617.6, gain: 1.0, Q: 3.71 }, { type: 'peaking', freq: 5646.4, gain: -1.2, Q: 4.71 },
+            { type: 'peaking', freq: 10000.0, gain: 2.9, Q: 1.12 }, { type: 'highshelf', freq: 10000.0, gain: 5.1, Q: 0.70 }
+        ];
+
         function initAudio() {
             if (audioInitialized) return;
-            
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
-                // 'playback' latency hint = bigger internal buffer = far less risk of crackle/underruns.
-                // We don't need low latency here since pan changes are already smoothed over ~100ms.
                 audioContext = new AudioContext({ latencyHint: 'playback' });
-                
-                // Route the <audio> element into the Web Audio API
                 track = audioContext.createMediaElementSource(audioPlayer);
                 
-                // 1. Create the 10-Band EQ Chain
                 eqNodes = eqData.map(data => {
                     const filter = audioContext.createBiquadFilter();
-                    filter.type = data.type;
-                    filter.frequency.value = data.freq;
-                    filter.Q.value = data.Q;
-                    filter.gain.value = 0; // Starts flat (0dB)
+                    filter.type = data.type; filter.frequency.value = data.freq; filter.Q.value = data.Q; filter.gain.value = 0;
                     return filter;
                 });
                 
-                // Link track -> EQ1 -> EQ2 ... -> EQ10
                 track.connect(eqNodes[0]);
-                for (let i = 0; i < eqNodes.length - 1; i++) {
-                    eqNodes[i].connect(eqNodes[i + 1]);
-                }
+                for (let i = 0; i < eqNodes.length - 1; i++) eqNodes[i].connect(eqNodes[i + 1]);
 
-                // 2. Pre-amp (GainNode)
                 gainNode = audioContext.createGain();
-                // Set default volume to -16.23 dB (10dB reduction from the closed state of -6.23dB)
-                // This ensures it starts quiet immediately without waiting for the first blink.
-                const basePreamp = Math.pow(10, -16.23 / 20);
-                gainNode.gain.value = basePreamp; 
+                gainNode.gain.value = Math.pow(10, -16.23 / 20); 
                 eqNodes[eqNodes.length - 1].connect(gainNode);
                 
-                // 3. Crossover Filters (3-Band: Bass / Mid / Treble)
-                // Each band is its own 4th-order (LR4-style) filter pair for a flat, seamless sum.
-                // Frequencies and Q come from the DEV sliders so you can tune them live.
-                const freq1 = parseFloat(cross1Slider.value); // bass/mid split
-                const freq2 = parseFloat(cross2Slider.value); // mid/treble split
-                const q = parseFloat(crossQSlider.value);     // shared "smoothness" - lower = gentler blend
-
+                const freq1 = parseFloat(cross1Slider.value);
+                const freq2 = parseFloat(cross2Slider.value);
+                const q = parseFloat(crossQSlider.value);
                 const makeStagePair = (type, freq) => {
-                    const s1 = audioContext.createBiquadFilter();
-                    s1.type = type; s1.frequency.value = freq; s1.Q.value = q;
-                    const s2 = audioContext.createBiquadFilter();
-                    s2.type = type; s2.frequency.value = freq; s2.Q.value = q;
-                    s1.connect(s2);
-                    return [s1, s2];
+                    const s1 = audioContext.createBiquadFilter(); s1.type = type; s1.frequency.value = freq; s1.Q.value = q;
+                    const s2 = audioContext.createBiquadFilter(); s2.type = type; s2.frequency.value = freq; s2.Q.value = q;
+                    s1.connect(s2); return [s1, s2];
                 };
 
-                bassLowpass = makeStagePair('lowpass', freq1);
-                midHighpass = makeStagePair('highpass', freq1);
-                midLowpass = makeStagePair('lowpass', freq2);
-                trebleHighpass = makeStagePair('highpass', freq2);
+                bassLowpass = makeStagePair('lowpass', freq1); midHighpass = makeStagePair('highpass', freq1);
+                midLowpass = makeStagePair('lowpass', freq2); trebleHighpass = makeStagePair('highpass', freq2);
 
-                // Bass: gainNode -> LP(freq1) -> LP(freq1)
                 gainNode.connect(bassLowpass[0]);
-
-                // Mid: gainNode -> HP(freq1) -> HP(freq1) -> LP(freq2) -> LP(freq2)
-                gainNode.connect(midHighpass[0]);
-                midHighpass[1].connect(midLowpass[0]);
-
-                // Treble: gainNode -> HP(freq2) -> HP(freq2)
+                gainNode.connect(midHighpass[0]); midHighpass[1].connect(midLowpass[0]);
                 gainNode.connect(trebleHighpass[0]);
 
-                // 4. Head-Tracked Panning (native StereoPannerNode, one per band above bass)
-                // This is the audiophile-safe choice: it applies the standard equal-power pan law
-                // directly to the existing L/R channels. Unlike PannerNode (HRTF/equalpower), it does
-                // NOT force a mono downmix and applies no convolution/head-filter coloring - the only
-                // thing that changes is the L/R balance, so timbre and phase stay untouched.
                 midPanner = audioContext.createStereoPanner();
                 midLowpass[1].connect(midPanner);
-
-                // Mid Pan Attenuation - trims dB off the mid band as it pans, live-controlled by
-                // the "Mid Pan Attenuation" slider. At center this is always 0dB regardless of the
-                // slider (there's nothing to trim yet); the trim ramps in as you turn your head.
-                midTrimGain = audioContext.createGain();
-                midTrimGain.gain.value = 1.0;
+                midTrimGain = audioContext.createGain(); midTrimGain.gain.value = 1.0;
                 midPanner.connect(midTrimGain);
 
-                // Treble gets its OWN panner so it can follow, ignore, or invert relative to the mid
-                // band's pan - controlled live by the "Treble Pan Behavior" slider.
                 treblePanner = audioContext.createStereoPanner();
                 trebleHighpass[1].connect(treblePanner);
                 
-                // 4.5. Bass Makeup Gain
-                // Equal-power panning raises the near channel from -3dB (center) up to 0dB (full pan) -
-                // a real +3dB climb. Bass bypasses the panner and stays flat, so without compensation
-                // it reads as progressively thinner the further you turn. This node tracks the same
-                // rise the mid band's near channel gets and applies it to bass too, keeping the
-                // bass:mids ratio constant at every head angle - bass still isn't panned/localized,
-                // it just gets louder together with whichever ear is currently loudest.
-                bassGain = audioContext.createGain();
-                bassGain.gain.value = 1.0;
-                
-                // 5. Master Mix Bus (Recombines the signal)
+                bassGain = audioContext.createGain(); bassGain.gain.value = 1.0;
                 mixBus = audioContext.createGain();
-                bassLowpass[1].connect(bassGain);
-                bassGain.connect(mixBus);   // Bass - loudness-compensated, still centered/mono
-                midTrimGain.connect(mixBus); // Mids/vocals - follows head tracking, trimmed as it pans
-                treblePanner.connect(mixBus); // Treble - independent pan behavior
                 
-                // 6. Transparent Safety Limiter
-                // Sits right before the output so that EQ boosts + preamp gain can never hard-clip the
-                // signal. Threshold is set just under 0dBFS with a fast attack; under normal program
-                // material it never engages, it only catches the rare stacked-boost peak.
+                bassLowpass[1].connect(bassGain); bassGain.connect(mixBus); 
+                midTrimGain.connect(mixBus); treblePanner.connect(mixBus);
+                
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 128;
+                mixBus.connect(analyser);
+
                 limiter = audioContext.createDynamicsCompressor();
-                limiter.threshold.value = -1.0;
-                limiter.knee.value = 0;
-                limiter.ratio.value = 20;
-                limiter.attack.value = 0.003;
-                limiter.release.value = 0.15;
+                limiter.threshold.value = -1.0; limiter.knee.value = 0; limiter.ratio.value = 20;
+                limiter.attack.value = 0.003; limiter.release.value = 0.15;
                 
-                // 7. Final Output
-                mixBus.connect(limiter);
-                limiter.connect(audioContext.destination);
-                
+                analyser.connect(limiter); limiter.connect(audioContext.destination);
                 audioInitialized = true;
             } catch (err) {
-                showError("Audio routing failed. Your browser might not support Web Audio API.");
-                console.error(err);
+                console.error("Audio routing failed:", err);
             }
         }
 
-        // Apply calculated pan value to the audio and UI
+        cross1Slider.addEventListener('input', (e) => {
+            const freq = parseFloat(e.target.value);
+            bassLowpass.forEach(f => { if(audioContext) f.frequency.setTargetAtTime(freq, audioContext.currentTime, 0.02) });
+            midHighpass.forEach(f => { if(audioContext) f.frequency.setTargetAtTime(freq, audioContext.currentTime, 0.02) });
+        });
+        crossQSlider.addEventListener('input', (e) => {
+            const q = parseFloat(e.target.value);
+            [...bassLowpass, ...midHighpass, ...midLowpass, ...trebleHighpass].forEach(f => {
+                if(audioContext) f.Q.setTargetAtTime(q, audioContext.currentTime, 0.02);
+            });
+        });
+
         function updateAudioPan(panValue) {
-            // Update audio node
             if (midPanner && audioContext) {
-                // Resume context if suspended (browser policy)
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                
-                // StereoPannerNode.pan is only meaningful over -1 (full left) to 1 (full right).
-                // High sensitivity settings can push panValue past that range, so clamp it - once
-                // you're fully panned to one ear, going "further" has no additional physical meaning.
+                if (audioContext.state === 'suspended') audioContext.resume();
                 const clampedPan = Math.max(-1, Math.min(1, panValue));
                 const t = audioContext.currentTime;
                 
-                // Mid/vocal band follows head tracking directly (native equal-power law, no coloring)
                 midPanner.pan.setTargetAtTime(clampedPan, t, 0.01);
-
-                // Mid Pan Attenuation: the near channel's equal-power gain naturally climbs from
-                // 0.7071 (center) to 1.0 (full pan) - a +3dB rise. "progress" (0 at center, 1 at full
-                // pan) measures how far into that rise we are; the slider's dB value is scaled by
-                // progress and applied so center is always untouched and the trim ramps in with pan.
-                const angle = (clampedPan + 1) * (Math.PI / 4); // maps -1..1 to 0..pi/2
-                const nearChannelGain = Math.max(Math.cos(angle), Math.sin(angle)); // 0.7071 (center) to 1.0 (full pan)
+                const angle = (clampedPan + 1) * (Math.PI / 4); 
+                const nearChannelGain = Math.max(Math.cos(angle), Math.sin(angle)); 
                 let effectiveMidNearGain = nearChannelGain;
+                
                 if (midTrimGain) {
-                    const progress = (nearChannelGain / Math.SQRT1_2 - 1) / (Math.SQRT2 - 1); // 0 at center, 1 at full pan
+                    const progress = (nearChannelGain / Math.SQRT1_2 - 1) / (Math.SQRT2 - 1); 
                     const midTrimDb = parseFloat(midTrimSlider.value);
                     const appliedTrimDb = midTrimDb * progress;
                     const midTrimLinear = Math.pow(10, appliedTrimDb / 20);
                     midTrimGain.gain.setTargetAtTime(midTrimLinear, t, 0.01);
-                    effectiveMidNearGain = nearChannelGain * midTrimLinear; // what the mid band's near ear actually ends up at
+                    effectiveMidNearGain = nearChannelGain * midTrimLinear;
                 }
 
-                // Treble band follows the same pan value scaled by the Treble Pan Behavior slider:
-                // +100% = matches mids exactly, 0% = always centered, -100% = opposite ear.
                 if (treblePanner) {
                     const trebleFactor = parseFloat(treblePanSlider.value) / 100;
                     const treblePan = Math.max(-1, Math.min(1, clampedPan * trebleFactor));
                     treblePanner.pan.setTargetAtTime(treblePan, t, 0.01);
                 }
 
-                // Mirror the mid band's ACTUAL (post-trim) near-channel gain onto the bass bus, so
-                // bass tracks whatever the mids really end up at rather than the theoretical raw
-                // equal-power value - if you dial out the mid rise entirely, bass stops boosting too.
                 if (bassGain) {
-                    const bassCompensation = effectiveMidNearGain / Math.SQRT1_2; // normalized so center = 1.0x
+                    const bassCompensation = effectiveMidNearGain / Math.SQRT1_2;
                     bassGain.gain.setTargetAtTime(bassCompensation, t, 0.01);
                 }
             }
-
-            // Update UI Meter
-            // If pan is 0 (center): width 10px, left 50%
-            // If pan is -1 (left): width 50%, left 0%
-            // If pan is 1 (right): width 50%, left 50%
-            
-            let meterLeft = "50%";
-            let meterWidth = "10px";
-            let displayPan = panValue.toFixed(2);
-            let direction = "Center";
-
-            if (panValue < -0.05) {
-                // Panning Left
-                let percent = Math.abs(panValue) * 50;
-                meterLeft = `${50 - percent}%`;
-                meterWidth = `${percent}%`;
-                direction = "Left";
-            } else if (panValue > 0.05) {
-                // Panning Right
-                let percent = Math.abs(panValue) * 50;
-                meterLeft = "50%";
-                meterWidth = `${percent}%`;
-                direction = "Right";
-            }
-
-            panMeter.style.left = meterLeft;
-            panMeter.style.width = meterWidth;
-            panText.innerText = `${direction} (${displayPan})`;
         }
 
-        // --- EFFECTS ENGINE --- //
-
-        // Handles the audio transitions based on eye state
         function handleEyeStateChange(closed) {
-            const eyeStateText = document.getElementById('eye-state-text');
-            
             if (closed) {
-                // EYES CLOSED: Apply V-Shape EQ
-                eyeStateText.innerText = 'EYES CLOSED (Dreamy V-Shape)';
-                eyeStateText.classList.replace('text-green-400', 'text-purple-400');
-                
                 if (audioContext) {
-                    // 1. Maintain Preamp at -6.23 dB to prevent EQ clipping
-                    const targetPreampClosed = Math.pow(10, -6.23 / 20);
-                    gainNode.gain.setTargetAtTime(targetPreampClosed, audioContext.currentTime, 0.1);
-                    
-                    // 2. Animate 10-band EQ to target values
-                    eqNodes.forEach((node, i) => {
-                        node.gain.setTargetAtTime(eqData[i].gain, audioContext.currentTime, 0.15);
-                    });
+                    gainNode.gain.setTargetAtTime(Math.pow(10, -6.23 / 20), audioContext.currentTime, 0.1);
+                    eqNodes.forEach((node, i) => node.gain.setTargetAtTime(eqData[i].gain, audioContext.currentTime, 0.15));
                 }
             } else {
-                // EYES OPEN: Normal Flat Mode
-                eyeStateText.innerText = 'EYES OPEN';
-                eyeStateText.classList.replace('text-purple-400', 'text-green-400');
-                
                 if (audioContext) {
-                    // 1. Drop Master Preamp to -10.0 dB as requested
-                    const targetPreampOpen = Math.pow(10, -10.0 / 20);
-                    gainNode.gain.setTargetAtTime(targetPreampOpen, audioContext.currentTime, 0.1);
-                    
-                    // 2. Flatten 10-band EQ back to 0dB
-                    eqNodes.forEach((node) => {
-                        node.gain.setTargetAtTime(0.0, audioContext.currentTime, 0.15);
-                    });
+                    gainNode.gain.setTargetAtTime(Math.pow(10, -10.0 / 20), audioContext.currentTime, 0.1);
+                    eqNodes.forEach(node => node.gain.setTargetAtTime(0.0, audioContext.currentTime, 0.15));
                 }
             }
         }
 
-        // --- VISION ENGINE (MediaPipe) --- //
+        // --- FULL SCREEN 3D VISUALIZER --- //
+        const numParticles = 250; // Increased count for full screen
+        let particles = [];
+        for(let i=0; i<numParticles; i++) {
+            particles.push({
+                angle: Math.random() * Math.PI * 2,
+                orbitRadius: 100 + Math.random() * (window.innerWidth / 2.5), // Expands across the whole screen
+                y: (Math.random() - 0.5) * (window.innerHeight / 1.5),
+                speed: (Math.random() > 0.5 ? 1 : -1) * (0.001 + Math.random() * 0.005),
+                size: 1.5 + Math.random() * 2
+            });
+        }
 
-        // Callback function when Face Mesh finds a face
+        function renderVisualizer() {
+            requestAnimationFrame(renderVisualizer);
+            if(!isTrackingStarted) return;
+
+            visualizerPan += (smoothedPan - visualizerPan) * 0.08; 
+
+            // Create light motion trails
+            canvasCtx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+            canvasCtx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+            let audioData = new Uint8Array(0);
+            if(analyser) {
+                audioData = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(audioData);
+            }
+
+            // Dynamically center based on sidebar state (logical/CSS pixels - the
+            // canvas draw context is already scaled for device pixel ratio)
+            const sidebarOffset = rightSidebar.classList.contains('translate-x-full') ? 0 : 420;
+            const cx = (logicalWidth - sidebarOffset) / 2;
+            const cy = logicalHeight / 2;
+            
+            const headRotationAngle = visualizerPan * (Math.PI / 2);
+
+            let corePulse = audioData.length ? (audioData[5] / 255) * 20 : 0;
+            canvasCtx.beginPath();
+            canvasCtx.arc(cx, cy, 60 + corePulse, 0, Math.PI * 2); // Larger central core
+            canvasCtx.fillStyle = isEyesClosed ? '#ffffff' : '#111111';
+            canvasCtx.shadowBlur = isEyesClosed ? 50 : 0;
+            canvasCtx.shadowColor = '#ffffff';
+            canvasCtx.fill();
+            canvasCtx.shadowBlur = 0;
+
+            particles.forEach((p, i) => {
+                p.angle += p.speed;
+                let currentAngle = p.angle + headRotationAngle;
+                
+                let audioBoost = 0;
+                if(audioData.length) {
+                    let bin = Math.floor((i / numParticles) * (audioData.length * 0.5));
+                    audioBoost = (audioData[bin] / 255) * 35; 
+                }
+
+                let r = p.orbitRadius + audioBoost;
+                let x = Math.cos(currentAngle) * r;
+                let z = Math.sin(currentAngle) * r;
+                let tilt = 0.3;
+                let screenX = cx + x;
+                let screenY = cy + p.y + (z * tilt);
+                
+                let scale = (z + 500) / 1000; 
+                if(scale < 0.1) scale = 0.1;
+
+                canvasCtx.globalAlpha = scale;
+                canvasCtx.beginPath();
+                canvasCtx.arc(screenX, screenY, p.size * scale * (isEyesClosed ? 3 : 1), 0, Math.PI * 2);
+                canvasCtx.fillStyle = isEyesClosed ? '#ffffff' : '#888888';
+                canvasCtx.fill();
+            });
+            canvasCtx.globalAlpha = 1.0; 
+        }
+
         function onResults(results) {
-            // Hide loading overlay once results start coming in
-            loadingOverlay.classList.add('hidden');
+            startOverlay.classList.add('opacity-0', 'pointer-events-none');
+            
+            if(!isTrackingStarted) {
+                isTrackingStarted = true;
+                settingsCanvas.width = 320;
+                settingsCanvas.height = 240;
+                renderVisualizer();
+            }
 
-            // Draw video frame to canvas
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            if(isSettingsOpen) {
+                settingsCtx.save();
+                settingsCtx.clearRect(0, 0, settingsCanvas.width, settingsCanvas.height);
+                settingsCtx.drawImage(results.image, 0, 0, settingsCanvas.width, settingsCanvas.height);
+            }
 
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
                 const landmarks = results.multiFaceLandmarks[0];
                 
-                // Draw face mesh
-                drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {color: '#C0C0C070', lineWidth: 1});
+                if(isSettingsOpen) {
+                    settingsCtx.fillStyle = '#ffffff';
+                    settingsCtx.beginPath();
+                    settingsCtx.arc(landmarks[159].x * settingsCanvas.width, landmarks[159].y * settingsCanvas.height, 3, 0, Math.PI*2);
+                    settingsCtx.arc(landmarks[386].x * settingsCanvas.width, landmarks[386].y * settingsCanvas.height, 3, 0, Math.PI*2);
+                    settingsCtx.fill();
+                }
                 
-                // Calculate Head Rotation (Yaw)
-                // We use specific landmarks: Nose tip (1), Left cheekbone (234), Right cheekbone (454)
                 const nose = landmarks[1];
-                const leftCheek = landmarks[234];  // Left side of face (viewer's right)
-                const rightCheek = landmarks[454]; // Right side of face (viewer's left)
-
-                // Highlight calculation points
-                drawLandmarks(canvasCtx, [nose, leftCheek, rightCheek], {color: '#3b82f6', radius: 4});
-
-                // Calculate horizontal distances from nose to cheeks
+                const leftCheek = landmarks[234];  
+                const rightCheek = landmarks[454]; 
                 const distToLeft = Math.abs(nose.x - leftCheek.x);
                 const distToRight = Math.abs(rightCheek.x - nose.x);
-
-                // Calculate the ratio of distances to determine rotation
-                let targetPan = 0;
+                
                 if (distToLeft + distToRight > 0) {
-                    // Normalize ratio: -1 to 1
                     let ratio = (distToRight - distToLeft) / (distToRight + distToLeft);
-                    
-                    if (invertPanToggle.checked) {
-                        ratio = -ratio;
-                    }
-
-                    // Mouse-acceleration style curve, applied to the bounded -1..1 ratio BEFORE
-                    // sensitivity (doing it after would blow up for sensitivity > 1). Exponent > 1
-                    // suppresses small near-center values much more than large ones - e.g. at 1.8,
-                    // a small 0.1 turn shrinks to ~0.016 while a full 1.0 turn stays at 1.0 - so tiny
-                    // head movements near center barely move the pan, while full turns still reach
-                    // full range. 1.0 = linear (old behavior, no damping).
+                    if (invertPanToggle.checked) ratio = -ratio;
                     const curveExponent = parseFloat(panCurveSlider.value);
                     const shapedRatio = Math.sign(ratio) * Math.pow(Math.abs(ratio), curveExponent);
-                    
-                    // Different sensitivity depending on eye state, read live each frame.
-                    const activeSensitivity = isEyesClosed
-                        ? parseFloat(sensClosedSlider.value)
-                        : parseFloat(sensOpenSlider.value);
-                    
+                    const activeSensitivity = isEyesClosed ? parseFloat(sensClosedSlider.value) : parseFloat(sensOpenSlider.value);
                     targetPan = shapedRatio * activeSensitivity;
                 }
-
-                // 3. APPLY MATHEMATICAL SMOOTHING
+                
                 smoothedPan += (targetPan - smoothedPan) * 0.70;
-
-                // Send the smoothed value to the audio engine
                 updateAudioPan(smoothedPan);
 
-                // 4. EYE TRACKING (EAR - Eye Aspect Ratio)
-                // Fix: Calculate actual pixel distance instead of normalized coordinates to prevent aspect ratio skewing
-                const getDist = (p1, p2) => Math.hypot(
-                    (p1.x - p2.x) * canvasElement.width, 
-                    (p1.y - p2.y) * canvasElement.height
-                );
-                
-                // Left Eye (Viewer's Right): Top 159, Bottom 145, Left 33, Right 133
-                const lTop = landmarks[159], lBot = landmarks[145];
-                const lLeft = landmarks[33], lRight = landmarks[133];
+                const lTop = landmarks[159], lBot = landmarks[145], lLeft = landmarks[33], lRight = landmarks[133];
                 const leftEAR = getDist(lTop, lBot) / getDist(lLeft, lRight);
-                
-                // Right Eye (Viewer's Left): Top 386, Bottom 374, Left 362, Right 263
-                const rTop = landmarks[386], rBot = landmarks[374];
-                const rLeft = landmarks[362], rRight = landmarks[263];
+                const rTop = landmarks[386], rBot = landmarks[374], rLeft = landmarks[362], rRight = landmarks[263];
                 const rightEAR = getDist(rTop, rBot) / getDist(rLeft, rRight);
-                
-                // FIXED: Use Math.min() instead of averaging.
-                // When you turn your head, one eye gets hidden and MediaPipe hallucinates that it is "open".
-                // By taking the minimum, as long as the ONE visible eye is closed, the effect stays active!
                 const activeEAR = Math.min(leftEAR, rightEAR);
                 
-                // Display the real-time EAR value on the UI so the user can debug their eye shape
                 currentEarText.innerText = activeEAR.toFixed(3);
+                const currentlyClosed = activeEAR < parseFloat(earSlider.value);
                 
-                // Read the dynamic threshold from the DEV slider
-                const blinkThreshold = parseFloat(earSlider.value);
-                
-                // If the aspect ratio drops below the threshold, the eyelids are closed
-                const currentlyClosed = activeEAR < blinkThreshold;
-                
-                // Trigger logic ONLY when the state changes (opening or closing)
                 if (currentlyClosed !== isEyesClosed) {
                     isEyesClosed = currentlyClosed;
                     handleEyeStateChange(isEyesClosed);
                 }
             }
-            canvasCtx.restore();
+            if(isSettingsOpen) settingsCtx.restore();
         }
 
-        // Setup Face Mesh
-        const faceMesh = new FaceMesh({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-        }});
-        
-        faceMesh.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: false,
-            minDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.6
-        });
-        
+        const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
         faceMesh.onResults(onResults);
 
-        // --- INITIALIZATION --- //
-
-        function showError(msg) {
-            errorMsg.innerText = msg;
-            errorMsg.classList.remove('hidden');
-        }
-
         startBtn.addEventListener('click', async () => {
-            // 1. Initialize Audio (requires click)
-            initAudio();
+            clearError();
 
-            // 2. Setup Camera
-            startBtn.classList.add('hidden');
+            // Camera access requires a "secure context" (https://, or localhost) in
+            // every modern browser. Opening this file directly (file://) - which is
+            // the single most common way this fails the first time on a new Mac -
+            // will make getUserMedia reject or simply not prompt at all. Catch that
+            // up front with a clear message rather than a silent failure.
+            if (!window.isSecureContext) {
+                showError('Camera access needs a secure context. Serve this file (e.g. "python3 -m http.server" then open http://localhost:8000) instead of opening it directly from Finder.');
+                return;
+            }
+
+            startBtn.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => startBtn.classList.add('hidden'), 500);
             loadingOverlay.classList.remove('hidden');
+            setTimeout(() => loadingOverlay.classList.remove('opacity-0'), 50);
             
-            // Set canvas resolution to match standard webcam
-            canvasElement.width = 640;
-            canvasElement.height = 480;
-
             const camera = new Camera(videoElement, {
-                onFrame: async () => {
-                    await faceMesh.send({image: videoElement});
-                },
-                width: 640,
-                height: 480
+                onFrame: async () => await faceMesh.send({image: videoElement}),
+                width: VIDEO_CAPTURE_WIDTH, height: VIDEO_CAPTURE_HEIGHT
             });
             
             try {
                 await camera.start();
             } catch (err) {
                 loadingOverlay.classList.add('hidden');
-                startBtn.classList.remove('hidden');
-                showError("Camera access denied or unavailable. Please allow camera permissions.");
+                startBtn.classList.remove('hidden', 'opacity-0', 'scale-95');
+
+                if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                    showError('Camera access was denied. On macOS: System Settings \u2192 Privacy & Security \u2192 Camera, then allow this browser and reload the page.');
+                } else if (err && err.name === 'NotFoundError') {
+                    showError('No camera was found. Check that one is connected and not in use by another app.');
+                } else if (err && err.name === 'NotReadableError') {
+                    showError('The camera is already in use by another app. Close it and try again.');
+                } else {
+                    showError('Camera could not be started. Please allow camera permissions and try again.');
+                }
+                console.error('Camera start failed:', err);
             }
         });
 
